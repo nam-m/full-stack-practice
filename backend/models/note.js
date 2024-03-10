@@ -1,20 +1,5 @@
 const mongoose = require('mongoose')
 
-mongoose.set('strictQuery', false)
-
-const url = process.env.MONGODB_URI
-
-console.log('connecting to url')
-
-mongoose.connect(url)
-
-  .then(result => {
-    console.log('connected to MongoDB')
-  })
-  .catch(error => {
-    console.log('error connecting to MongoDB:', error.message)
-  })
-
 const noteSchema = new mongoose.Schema({
   content: {
     type: String,
@@ -24,8 +9,8 @@ const noteSchema = new mongoose.Schema({
   important: Boolean,
 })
 
-// Use id instead of _id 
-// and remove auto-generated _id and __v for each object 
+// Use id instead of _id
+// and remove auto-generated _id and __v for each object
 noteSchema.set('toJSON', {
   transform: (document, returnedObject) => {
     // document: the mongoose document being converted
