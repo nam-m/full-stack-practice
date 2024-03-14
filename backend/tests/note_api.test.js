@@ -1,105 +1,129 @@
-const { test, after, beforeEach } = require('node:test')
+const { test, after, beforeEach, describe } = require('node:test')
 const assert = require('node:assert')
 const mongoose = require('mongoose')
 const helper = require('./test_helper')
 const supertest = require('supertest')
 const Note = require('../models/note')
 const app = require('../app')
-// const logger = require('../utils/logger')
 
 const api = supertest(app)
 
-beforeEach(async () => {
-  await Note.deleteMany({})
-  let noteObject = new Note(helper.initialNotes[0])
-  await noteObject.save()
-  noteObject = new Note(helper.initialNotes[1])
-  await noteObject.save()
-})
+describe('when there are some notes saved', () => {
 
-test('notes are returned as json', async () => {
-  await api
-    .get('/api/notes')
-    .expect('Content-Type', /application\/json/)
-    .expect(200)
-})
+  beforeEach(async () => {
+    await Note.deleteMany({})
+    const noteObjects = helper.initialNotes.map(note => new Note(note))
+    const promiseArray = noteObjects.map(note => note.save())
+    // All note objects are resolved with save() in parallel in Promise.all
+    await Promise.all(promiseArray)
+  })
 
-test('all notes are returned', async () => {
-  const response = await api.get('/api/notes')
-  assert.strictEqual(response.body.length, helper.initialNotes.length)
-})
+  test('notes are returned as json', async () => {
+    console.log('entered test')
+    await api
+      .get('/api/notes')
+      .expect('Content-Type', /application\/json/)
+      .expect(200)
+  })
 
-test('there are two notes', async () => {
-  const response = await api.get('/api/notes')
-  assert.strictEqual(response.body.length, 2)
-})
+  test('all notes are returned', async () => {
+    const response = await api.get('/api/notes')
+    assert.strictEqual(response.body.length, helper.initialNotes.length)
+  })
 
-test('the first note is about HTTP methods', async () => {
-  const response = await api.get('/api/notes')
+  test('there are two notes', async () => {
+    const response = await api.get('/api/notes')
+    assert.strictEqual(response.body.length, 2)
+  })
 
-  const contents = response.body.map(e => e.content)
-  assert(contents.includes('HTML is easy'), true)
-})
+  test('the first note is about HTTP methods', async () => {
+    const response = await api.get('/api/notes')
 
-test('a valid note can be added ', async () => {
-  const newNote = {
-    content: 'async/await simplifies making async calls',
-    important: true,
-  }
+    const contents = response.body.map(e => e.content)
+    assert(contents.includes('HTML is easy'), true)
+  })
 
-  await api
-    .post('/api/notes')
-    .send(newNote)
-    .expect(201)
-    .expect('Content-Type', /application\/json/)
+  describe('viewing a specific note', () => {
 
-  const notesAtEnd = await helper.notesInDb()
-  assert.strictEqual(notesAtEnd.length, helper.initialNotes.length + 1)
+    test('succeeds with valid id', async () => {
+      const notesAtStart = await helper.notesInDb()
+      const noteToView = notesAtStart[0]
+      const resultNote = await api
+        .get(`/api/notes/${noteToView.id}`)
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
 
-  const contents = notesAtEnd.map(n => n.content)
-  assert(contents.includes('async/await simplifies making async calls'))
-})
+      assert.deepStrictEqual(resultNote.body, noteToView)
+    })
 
-test('note without content is not added', async () => {
-  const newNote = {
-    important: true
-  }
+    test('fails with code 404 if note does not exist', async () => {
+      const validNonExistingId = await helper.nonExistingId()
+      await api
+        .get(`/api/notes/${validNonExistingId}`)
+        .expect(404)
+    })
 
-  await api
-    .post('/api/notes')
-    .send(newNote)
-    .expect(400)
+    test('fails with code 400 if id is invalid', async () => {
+      const invalidId = '5a3d5da59070081a82a3445'
+      await api
+        .get(`/api/notes/${invalidId}`)
+        .expect(400)
+    })
+  })
 
-  const notesAtEnd = await helper.notesInDb()
-  assert.strictEqual(notesAtEnd.length, helper.initialNotes.length)
-})
+  describe('addition of a new note', () => {
+    test('succeeds with valid data', async () => {
+      const newNote = {
+        content: 'async/await simplifies making async calls',
+        important: true,
+      }
 
-test('a specific note can be viewed', async () => {
-  const notesAtStart = await helper.notesInDb()
-  const noteToView = notesAtStart[0]
+      await api
+        .post('/api/notes')
+        .send(newNote)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
 
-  const resultNote = await api
-    .get(`/api/notes/${noteToView.id}`)
-    .expect(200)
-    .expect('Content-Type', /application\/json/)
+      const notesAtEnd = await helper.notesInDb()
+      assert.strictEqual(notesAtEnd.length, helper.initialNotes.length + 1)
 
-  assert.deepStrictEqual(resultNote.body, noteToView)
-})
+      const contents = notesAtEnd.map(n => n.content)
+      assert(contents.includes('async/await simplifies making async calls'))
+    })
 
-test('a note can be deleted', async () => {
-  const notesAtStart = await helper.notesInDb()
-  const noteToDelete = notesAtStart[0]
+    test('fails with code 400 with invalid data', async () => {
+      const newNote = {
+        important: true
+      }
 
-  await api
-    .delete(`/api/notes/${noteToDelete.id}`)
-    .expect(204)
+      await api
+        .post('/api/notes')
+        .send(newNote)
+        .expect(400)
 
-  const notesAtEnd = await helper.notesInDb()
+      const notesAtEnd = await helper.notesInDb()
+      assert.strictEqual(notesAtEnd.length, helper.initialNotes.length)
+    })
+  })
 
-  const contents = notesAtEnd.map(r => r.content)
-  assert(!contents.includes(noteToDelete.content))
+  describe('deletion of a note', () => {
 
-  assert.strictEqual(notesAtEnd.length, helper.initialNotes.length - 1)
+    test('succeeds with code 204 if id is valid', async () => {
+      const notesAtStart = await helper.notesInDb()
+      const noteToDelete = notesAtStart[0]
+
+      await api
+        .delete(`/api/notes/${noteToDelete.id}`)
+        .expect(204)
+
+      const notesAtEnd = await helper.notesInDb()
+
+      const contents = notesAtEnd.map(r => r.content)
+      assert(!contents.includes(noteToDelete.content))
+
+      assert.strictEqual(notesAtEnd.length, helper.initialNotes.length - 1)
+    })
+  })
 })
 
 after(async () => {

@@ -1,6 +1,5 @@
 const notesRouter = require('express').Router()
 const Note = require('../models/note')
-const logger = require('../utils/logger')
 
 notesRouter.get('/', async (request, response) => {
   const notes = await Note.find({})
@@ -40,7 +39,6 @@ notesRouter.post('/', async (request, response, next) => {
 
 notesRouter.delete('/:id', async (request, response, next) => {
   try {
-    logger.info('request params id: ', request.params.id)
     const deletedNote = await Note.findByIdAndDelete(request.params.id)
     if (deletedNote) {
       response.status(204).end()
