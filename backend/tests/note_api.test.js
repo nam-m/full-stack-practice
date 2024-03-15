@@ -3,19 +3,17 @@ const assert = require('node:assert')
 const mongoose = require('mongoose')
 const helper = require('./test_helper')
 const supertest = require('supertest')
+const bcrypt = require('bcrypt')
 const Note = require('../models/note')
+const User = require('../models/user')
 const app = require('../app')
 
 const api = supertest(app)
 
 describe('when there are some notes saved', () => {
-
   beforeEach(async () => {
     await Note.deleteMany({})
-    const noteObjects = helper.initialNotes.map(note => new Note(note))
-    const promiseArray = noteObjects.map(note => note.save())
-    // All note objects are resolved with save() in parallel in Promise.all
-    await Promise.all(promiseArray)
+    await Note.insertMany(helper.initialNotes)
   })
 
   test('notes are returned as json', async () => {
@@ -44,7 +42,6 @@ describe('when there are some notes saved', () => {
   })
 
   describe('viewing a specific note', () => {
-
     test('succeeds with valid id', async () => {
       const notesAtStart = await helper.notesInDb()
       const noteToView = notesAtStart[0]
@@ -107,7 +104,6 @@ describe('when there are some notes saved', () => {
   })
 
   describe('deletion of a note', () => {
-
     test('succeeds with code 204 if id is valid', async () => {
       const notesAtStart = await helper.notesInDb()
       const noteToDelete = notesAtStart[0]
@@ -123,6 +119,62 @@ describe('when there are some notes saved', () => {
 
       assert.strictEqual(notesAtEnd.length, helper.initialNotes.length - 1)
     })
+  })
+})
+
+describe('when there is initially one user in db', () => {
+  beforeEach(async () => {
+    await User.deleteMany({})
+    const passwordHash = await bcrypt.hash('sekret', 10)
+    const user = new User({
+      username: 'root',
+      passwordHash: passwordHash
+    })
+    await user.save()
+  })
+
+  test('creation succeeds with a fresh username', async () => {
+    const usersAtStart = await helper.usersInDb()
+
+    const newUser = {
+      username: 'nmai',
+      name: 'Nam Mai',
+      password: 'helloworld',
+    }
+
+    await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+
+    const usersAtEnd = await helper.usersInDb()
+    assert.strictEqual(usersAtEnd.length, usersAtStart.length + 1)
+
+    const usernames = usersAtEnd.map(u => u.username)
+    assert(usernames.includes(newUser.username))
+  })
+
+  test('creation fails with proper statuscode and message if username already taken', async () => {
+    const usersAtStart = await helper.usersInDb()
+
+    const newUser = {
+      username: 'root',
+      name: 'Superuser',
+      password: 'helloworld',
+    }
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+
+    const usersAtEnd = await helper.usersInDb()
+
+    assert(result.body.error.includes('expected `username` to be unique'))
+
+    assert.strictEqual(usersAtEnd.length, usersAtStart.length)
   })
 })
 
