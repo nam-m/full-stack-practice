@@ -7,6 +7,12 @@ const noteSchema = new mongoose.Schema({
     required: true
   },
   important: Boolean,
+  // Contains user information that creates notes
+  user: {
+    type: mongoose.Schema.ObjectId,
+    // model to use during population
+    ref: 'User'
+  }
 })
 
 // Use id instead of _id

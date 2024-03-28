@@ -12,11 +12,13 @@ const userSchema = new mongoose.Schema({
   notes: [
     {
       type: mongoose.Schema.Types.ObjectId,
+      // model to use during population
       ref: 'Note'
     }
   ]
 })
 
+// Modify the object returned from the db before returning to the application
 userSchema.set('toJSON', {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString()
