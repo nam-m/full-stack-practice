@@ -1,11 +1,11 @@
-import { useState } from "react"
+import { useState } from 'react'
 
 const LoginForm = (props) => {
-  const [username, setUsername] = useState('')   
-  const [password, setPassword] = useState('') 
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault()
     props.handleLogin(username, password)
     setUsername('')
     setPassword('')
@@ -29,11 +29,11 @@ const LoginForm = (props) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-      </div>
+        </div>
         <button type="submit">login</button>
       </form>
     </div>
- )
+  )
 }
 
 export default LoginForm

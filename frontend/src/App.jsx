@@ -44,7 +44,7 @@ const App = () => {
   const toggleImportanceOf = id => {
     const note = notes.find(n => n.id === id)
     const changedNote = { ...note, important: !note.important }
-  
+
     noteService
       .update(id, changedNote)
       .then(returnedNote => {
@@ -81,9 +81,9 @@ const App = () => {
     }
   }
 
-  // Currently, logout is only hanlded on client side
+  // Currently, logout is only handled on client side
   // by removing the user and their token from localStorage
-  // Server side token invalidation techniques such as blacklisting, timeout 
+  // Server side token invalidation techniques such as blacklisting, timeout
   // may be considered in the future
   const handleLogout = () => {
     try {
@@ -102,7 +102,7 @@ const App = () => {
       <h1>Notes</h1>
       <Notification message={errorMessage}/>
 
-      {user === null ? 
+      {user === null ?
         <Togglable buttonLabel="log in">
           <LoginForm handleLogin={handleLogin}/>
         </Togglable> :
@@ -119,12 +119,12 @@ const App = () => {
         <button onClick={() => setShowAll(!showAll)}>
           show {showAll ? 'important' : 'all' }
         </button>
-      </div>      
+      </div>
       <ul>
-        {notesToShow.map(note => 
-          <Note 
-            key={note.id} 
-            note={note} 
+        {notesToShow.map(note =>
+          <Note
+            key={note.id}
+            note={note}
             toggleImportance={() => toggleImportanceOf(note.id)}
           />
         )}
