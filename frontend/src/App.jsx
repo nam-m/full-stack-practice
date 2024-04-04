@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Note from './components/Note'
 import noteService from './services/notes'
 import Notification from './components/Notification'
 import loginService from './services/login'
-import logoutService from './services/logout'
 import LoginForm from './components/LoginForm'
 import Togglable from './components/Togglable'
 import NoteForm from './components/NoteForm'
@@ -13,6 +12,7 @@ const App = () => {
   const [showAll, setShowAll] = useState(false)
   const [errorMessage, setErrorMessage] = useState(null)
   const [user, setUser] = useState(null)
+  const noteFormRef = useRef()
 
   useEffect(() => {
     noteService
@@ -33,6 +33,7 @@ const App = () => {
   }, [])
 
   const addNote = (noteObject) => {
+    noteFormRef.current.toggleVisibility()
     noteService
       .create(noteObject)
       .then(returnedNote => {
@@ -71,6 +72,7 @@ const App = () => {
       // Set token to authorize user's note manipulation
       noteService.setToken(user.token)
       setUser(user)
+      setErrorMessage('')
     } catch(exception) {
       setErrorMessage('wrong credentials')
       setTimeout(() => {
@@ -85,7 +87,6 @@ const App = () => {
   // may be considered in the future
   const handleLogout = () => {
     try {
-      // await logoutService.logout()
       localStorage.removeItem('loggedNoteUser')
       setUser(null)
     } catch (exception) {
@@ -107,10 +108,9 @@ const App = () => {
         </Togglable> :
         <div>
           <p>{user.name} logged-in</p>
-          <Togglable buttonLabel="new note">
+          <Togglable buttonLabel="new note" ref={noteFormRef}>
             <NoteForm createNote={addNote}/>
           </Togglable>
-          
           <button onClick={() => handleLogout()}>log out</button>
         </div>
       }
