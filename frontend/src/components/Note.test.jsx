@@ -15,7 +15,7 @@ test('clicking button calls the event handler once', async () => {
   const mockHandler = vi.fn()
 
   render(<Note note={note} toggleImportance={mockHandler} />)
-  const button = screen.getByText('make not important')
+  const button = screen.getByText('make not important', { exact: false })
   await user.click(button)
   expect(mockHandler).toHaveBeenCalledOnce()
 
